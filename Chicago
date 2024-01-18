@@ -1,0 +1,157 @@
+create database chicago;
+
+use chicago;
+
+-- Exploring the dataset --
+select * from chicagocensusdata
+join chicagocrimedata using (community_area_number)
+join chicagopublicschools using (community_area_number);
+select percent_aged_16_unemployed from chicagocensusdata;
+select PERCENT_AGED_16__UNEMPLOYED from chicagocensusdata;
+select * from chicagocrimedata;
+select count(community_area_number) from chicagocensusdata;
+
+
+-- Now, lets delve into the analysis, below are the case study questions and solutions --
+
+-- 1. total number of crime cases
+select count(case_number) as total_number_of_crimes 
+from chicagocrimedata;
+
+-- 2. community area with less than 11000 per capita income
+select community_area_number,community_area_name,per_capita_income from chicagocensusdata
+where per_capita_income <'11000';
+
+-- just to explore more on the per_capita_income
+
+select community_area_name,per_capita_income from chicagocensusdata
+where per_capita_income >'11000';
+-- count of per_capita_income of community_area --
+select count(per_capita_income) from chicagocensusdata
+where per_capita_income <='11000';
+
+select count(per_capita_income) 
+from chicagocensusdata
+where per_capita_income >'11000';
+
+-- 3. List all case numbers for crimes involving minors
+select case_number 
+from chicagocrimedata
+where description like '%minor%';
+
+-- 4. List all kidnapping crimes involving a child
+select case_number,
+primary_type as crime,
+description 
+from chicagocrimedata 
+where primary_type ='kidnapping';
+
+-- 5. What kind of crimes were recorded at schools
+select primary_type 
+from chicagocrimedata
+where location_description 
+like '%school%';
+
+-- 6, List the average safety score for all types of schools
+SELECT "Elementary, Middle, or High School",
+AVG(SAFETY_SCORE) AS AVERAGE_SAFETY_SCORE
+FROM CHICAGOPUBLICSCHOOLS
+GROUP BY "Elementary, Middle, or High School";
+
+-- 7. List 5 community areas with highest % of households below poverty line
+select community_area_name,
+community_area_number,
+percent_households_below_poverty from chicagocensusdata
+order by percent_households_below_poverty 
+desc limit 5 ;
+
+-- 8. Which community area(number) is most crime prone
+select community_area_number,
+community_area_name, 
+count(community_area_number) as most_crime_prone 
+from chicagocrimedata
+join chicagocensusdata using (community_area_number)
+group by community_area_number
+order by count(community_area_number) 
+desc limit 1;
+
+-- 9. Use a sub-query to find the name of the community area with highest hardship index
+select community_area_name 
+from chicagocensusdata 
+where 
+hardship_index =(
+select max(hardship_index) 
+from chicagocensusdata);
+
+-- To check the frequency of hardship index --
+select max(hardship_index), min(hardship_index) from chicagocensusdata ;
+
+-- 10. Use a sub-query to determine the Community Area Name with most number of crimes
+SELECT community_area_name
+FROM chicagocensusdata 
+WHERE COMMUNITY_AREA_NUMBER = (    
+    SELECT c.COMMUNITY_AREA_NUMBER 
+    FROM chicagocrimedata as c
+    GROUP BY c.COMMUNITY_AREA_NUMBER
+    ORDER BY COUNT(c.COMMUNITY_AREA_NUMBER) DESC
+    LIMIT 1);
+
+
+-- List the case number, type of crime and community area for all crimes in community area number 18.
+select case_number,
+primary_type as type_of_crime,
+community_area_number from 
+chicagocrimedata 
+where community_area_number ='18';
+
+-- List all crimes that took place at a school. Include case number, crime type and community name.
+select (primary_type) as crimes_in_school, 
+case_number,
+community_area_name 
+from chicagocrimedata
+join chicagocensusdata 
+using(community_area_number)
+where 
+location_description like '%school%';
+
+
+-- For the communities of Oakland, Armour Square, Edgewater and CHICAGO list the associated community_area_numbers and the case_numbers.
+select (community_area_name),community_area_number,case_number from chicagocrimedata
+join chicagocensusdata using (community_area_number)
+where community_area_name in ('oakland', 'armour_square', 'edgewater', 'chicago');
+
+-- Write and execute a SQL query to list the school names, community names and average attendance for communities with a hardship index of 98.
+select name_of_school,community_area_name, average_student_attendance,hardship_index from chicagopublicschools
+join chicagocensusdata using (community_area_name)
+where hardship_index='98';
+
+-- Write and execute a SQL query to list all crimes that took place at a school. Include case number, crime type and community name.
+select (primary_type) as crimes_in_school, case_number,community_area_name from chicagocrimedata
+join chicagocensusdata using(community_area_number)
+where location_description like '%school%';
+
+-- Exercise 2: Creating a View
+-- For privacy reasons, you have been asked to create a view that enables users 
+-- to select just the school name and the icon fields from the CHICAGO_PUBLIC_SCHOOLS table. 
+-- By providing a view, you can ensure that users cannot see the actual scores given to a school, 
+-- just the icon associated with their score. You should define new names for the view columns 
+-- to obscure the use of scores and icons in the original table.
+
+-- solution to exercise 2
+ create view pschicago 
+ (school_name,safety_rating,family_rating,environment_rating,instruction_rating,leaders_rating,teachers_rating)
+ as select 
+ name_of_school,
+ safety_icon,
+ family_involvement_icon,
+ environment_icon,
+ instruction_icon,
+ leaders_icon,
+ teachers_icon
+ from chicagopublicschools;
+
+ -- Write and execute a SQL statement that returns all of the columns from the view
+ select * from pschicago;
+ 
+ -- Write and execute a SQL statement that returns just the school name and leaders rating from the view.
+ select school_name,leaders_rating from pschicago;
